@@ -96,6 +96,14 @@
   }
   .apikey-bar input:focus { border-color: var(--terra-light); }
   .apikey-bar input::placeholder { color: rgba(245,239,230,0.25); }
+  .apikey-bar input.needs-key {
+    border-color: var(--terra-light);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--terra-light); box-shadow: 0 0 0 0 rgba(232,168,130,0.4); }
+    50% { border-color: var(--terra); box-shadow: 0 0 0 4px rgba(232,168,130,0); }
+  }
   .apikey-status {
     font-size: 11px;
     padding: 5px 10px;
@@ -403,6 +411,9 @@
   <span class="apikey-help">Obtenha em <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a></span>
 </div>
 
+<div id="key-hint" style="background:#1E1410;padding:8px 40px;font-size:12px;color:rgba(212,184,150,0.7);display:flex;align-items:center;gap:6px;">
+  <span>⚠️</span> <span>Insira sua chave de API da Anthropic acima para usar os plugins. Obtenha em <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--terra-light);">console.anthropic.com</a> → API Keys → Create Key</span>
+</div>
 <div class="tabs-wrapper">
   <button class="tab-btn active" onclick="switchTab('carrossel')">🎠 Carrossel</button>
   <button class="tab-btn" onclick="switchTab('legenda')">✍️ Legenda</button>
@@ -609,20 +620,27 @@ function switchTab(tab) {
 function updateKeyStatus() {
   const key = document.getElementById('apikey-input').value.trim();
   const status = document.getElementById('apikey-status');
-  if (key.startsWith('sk-ant-')) {
-    status.textContent = '✓ Chave válida';
+  if (key.length > 10) {
+    status.textContent = '✓ Chave inserida';
     status.className = 'apikey-status ok';
-    localStorage.setItem('raquel_apikey', key);
+    document.getElementById('apikey-input').classList.remove('needs-key');
+    document.getElementById('key-hint').style.display = 'none';
+    try { localStorage.setItem('raquel_apikey', key); } catch(e) {}
+    try { sessionStorage.setItem('raquel_apikey', key); } catch(e) {}
   } else {
     status.textContent = 'Sem chave';
     status.className = 'apikey-status empty';
+    document.getElementById('apikey-input').classList.add('needs-key');
+    document.getElementById('key-hint').style.display = 'flex';
   }
 }
 
 // Load saved key on startup
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('raquel_apikey');
-  if (saved) {
+  let saved = null;
+  try { saved = localStorage.getItem('raquel_apikey'); } catch(e) {}
+  if (!saved) { try { saved = sessionStorage.getItem('raquel_apikey'); } catch(e) {} }
+  if (saved && saved.length > 10) {
     document.getElementById('apikey-input').value = saved;
     updateKeyStatus();
   }
@@ -630,8 +648,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function getApiKey() {
   const key = document.getElementById('apikey-input').value.trim();
-  if (!key) {
-    alert('Por favor, insira sua chave de API da Anthropic no campo acima.\n\nObtenhha em: console.anthropic.com/settings/keys');
+  if (!key || key.length < 10) {
+    alert('Por favor, insira sua chave de API da Anthropic no campo no topo da página.\n\nComo obter:\n1. Acesse console.anthropic.com\n2. Vá em "API Keys"\n3. Clique em "Create Key"\n4. Cole a chave no campo acima');
     return null;
   }
   return key;
